@@ -6,7 +6,7 @@ const Column = ({ col: { list, id } }) => {
   return (
     <Droppable droppableId={id}>
       {(provided) => (
-        <div className="text-center p-2 border rounded bg-gray-200">
+        <div className="flex flex-col gap-2 p-4 bg-gray-200 rounded shadow-md w-72 min-h-[100px] ">
           <h2>{id}</h2>
           <div
             style={{
