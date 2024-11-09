@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import "./App.css";
-import Column from "./Column";
 
 const App = () => {
   const initialColumns = {
@@ -24,21 +23,20 @@ const App = () => {
   };
   const [columns, setColumns] = useState(initialColumns);
   const onDragEnd = ({ source, destination }) => {
-       // Make sure we have a valid destination
-       if (destination === undefined || destination === null) return null
+    // Make sure we have a valid destination
+    if (destination === undefined || destination === null) return null;
 
-       // If the source and destination columns are the same
-       // AND if the index is the same, the item isn't moving
-       if (
-         source.droppableId === destination.droppableId &&
-         destination.index === source.index
-       )
-         return null
-   
-   
-       // Set start and end variables
-       const start = columns[source.droppableId]
-       const end = columns[destination.droppableId]
+    // If the source and destination columns are the same
+    // AND if the index is the same, the item isn't moving
+    if (
+      source.droppableId === destination.droppableId &&
+      destination.index === source.index
+    )
+      return null;
+
+    // Set start and end variables
+    const start = columns[source.droppableId];
+    const end = columns[destination.droppableId];
     // If start is the same as end, we're in the same column
     if (start === end) {
       /* ... */
@@ -87,7 +85,39 @@ const App = () => {
         }}
       >
         {Object.values(columns).map((col) => (
-          <Column col={col} key={col.id} />
+          <Droppable droppableId={col.id}>
+            {(provided) => (
+              <div className="text-center p-2 border rounded bg-gray-200">
+                <h2>{col.id}</h2>
+                <div
+                  key={col.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "120px",
+                  }}
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                >
+                  {col.list.map((text, index) => (
+                    <Draggable draggableId={text} index={index} key={index}>
+                      {(provided) => (
+                        <div
+                          className="bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1"
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          {text}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              </div>
+            )}
+          </Droppable>
         ))}
       </div>
     </DragDropContext>
