@@ -5,14 +5,19 @@ import Column from "./Column";
 
 const App = () => {
   const [columns, setColumns] = useState({
-    todo: { id: "todo", list: ["item 1", "item 2", "item 3"] },
-    doing: { id: "doing", list: [] },
-    done: { id: "done", list: [] },
-    reject: { id: "reject", list: [] },
+    todo: { status: "todo", list: ["item 1", "item 2", "item 3"] },
+    doing: { status: "doing", list: [] },
+    done: { status: "done", list: [] },
+    reject: { status: "reject", list: [] },
   });
 
   const onDragEnd = ({ source, destination }) => {
-    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return;
+    if (
+      !destination ||
+      (source.droppableId === destination.droppableId &&
+        source.index === destination.index)
+    )
+      return;
 
     const start = columns[source.droppableId];
     const end = columns[destination.droppableId];
@@ -24,7 +29,7 @@ const App = () => {
 
       setColumns((state) => ({
         ...state,
-        [start.id]: { ...start, list: newList },
+        [start.status]: { ...start, list: newList },
       }));
     } else {
       const newStartList = Array.from(start.list);
@@ -34,8 +39,8 @@ const App = () => {
 
       setColumns((state) => ({
         ...state,
-        [start.id]: { ...start, list: newStartList },
-        [end.id]: { ...end, list: newEndList },
+        [start.status]: { ...start, list: newStartList },
+        [end.status]: { ...end, list: newEndList },
       }));
     }
   };
@@ -47,7 +52,7 @@ const App = () => {
 
     setColumns((state) => ({
       ...state,
-      [newColumnId]: { id: newColumnId, list: [] },
+      [newColumnId]: { status: newColumnId, list: [] },
     }));
     nameRef.current.value = "";
   };
@@ -74,7 +79,7 @@ const App = () => {
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex flex-wrap gap-4 px-4 justify-center h-auto">
           {Object.values(columns).map((col) => (
-            <Column col={col} key={col.id} />
+            <Column col={col} key={col.status} />
           ))}
         </div>
       </DragDropContext>
