@@ -4,30 +4,33 @@ import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { useFetchDataQuery, useUpdateDataMutation } from "./store/api/DataApi";
 
 const App = () => {
-  // Fetch data from the API
-  const { data: fetchedData } = useFetchDataQuery();
-  const data = useSelector((state) => state.data.data);
-
-  // Initialize columns state to match fetched data
+  const { data: apiResponse } = useFetchDataQuery();
+  // const  = useSelector((state) => state.data.data.data?.data);
   const [columns, setColumns] = useState({});
-  const [updateData, { error }] = useUpdateDataMutation();
+  const [updateData] = useUpdateDataMutation();
   const nameRef = useRef();
 
   // Effect to update columns when data is fetched
   useEffect(() => {
-    if (fetchedData) {
-      // Organize data into columns
-      const organizedColumns = {};
-      fetchedData.forEach((col) => {
-        organizedColumns[col.status] = col;
-      });
+    if (apiResponse?.data?.data) {
+      const organizedColumns = Object.entries(apiResponse.data.data).reduce(
+        (acc, [status, items]) => ({
+          ...acc,
+          [status]: { status, items },
+        }),
+        {}
+      );
       setColumns(organizedColumns);
     }
-  }, [fetchedData]); // Add fetchedData as a dependency
+  }, [apiResponse]);
 
   // Handle drag end event to update the column status of the item
   const onDragEnd = ({ source, destination }) => {
-    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
+    if (
+      !destination ||
+      (source.droppableId === destination.droppableId &&
+        source.index === destination.index)
+    ) {
       return;
     }
 
@@ -35,26 +38,26 @@ const App = () => {
     const end = columns[destination.droppableId];
 
     if (start === end) {
-      // Moving within the same column
       const newItems = Array.from(start.items);
       const [movedItem] = newItems.splice(source.index, 1);
       newItems.splice(destination.index, 0, movedItem);
-
       setColumns((prevState) => ({
         ...prevState,
         [start.status]: { ...start, items: newItems },
       }));
     } else {
-      // Moving between columns
       const startItems = Array.from(start.items);
       const [movedItem] = startItems.splice(source.index, 1);
 
       const endItems = Array.from(end.items);
       endItems.splice(destination.index, 0, movedItem);
 
-      // Update item status after moving
-      const updatedItem = { ...movedItem, status: end.status };
-      updateData(updatedItem); // Call API to update status
+      const updatedItem = {
+        itemId: movedItem.id,
+        updatedStatus: end.status,
+        prevStatus: start.status,
+      };
+      updateData(updatedItem);
 
       setColumns((prevState) => ({
         ...prevState,
@@ -70,7 +73,10 @@ const App = () => {
     if (newColumnId.trim() === "") return;
 
     const newColumn = { status: newColumnId, items: [] };
-    setColumns((prevState) => ({ ...prevState, [newColumn.status]: newColumn }));
+    setColumns((prevState) => ({
+      ...prevState,
+      [newColumn.status]: newColumn,
+    }));
     nameRef.current.value = "";
   };
 
@@ -130,7 +136,9 @@ const App = () => {
                         {(provided, snapshot) => (
                           <div
                             className={`bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1 ${
-                              snapshot.isDragging ? "bg-blue-200 text-black" : ""
+                              snapshot.isDragging
+                                ? "bg-blue-200 text-black"
+                                : ""
                             }`}
                             ref={provided.innerRef}
                             {...provided.draggableProps}

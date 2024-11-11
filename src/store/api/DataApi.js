@@ -8,14 +8,14 @@ export const dataApi = createApi({
   endpoints: (builder) => ({
     fetchData: builder.query({
       query: () => ({
-        url: "/data",
+        url: "/get",
         method: "GET",
       }),
       providesTags: ["Data"],
     }),
     updateData: builder.mutation({
       query: (data) => ({
-        url: `/data/items/${data?.id}`,
+        url: `/order-change`,
         method: "PUT",
         data,
       }),
