@@ -1,60 +1,77 @@
-import React, { useRef, useState } from "react";
-import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
-import "./App.css";
+import React, { useState, useRef, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { useFetchDataQuery, useUpdateDataMutation } from "./store/api/DataApi";
 
 const App = () => {
-  const initialColumns = {
-    todo: { id: "todo", list: ["item 1", "item 2", "item 3"] },
-    doing: { id: "doing", list: [] },
-    done: { id: "done", list: [] },
-    reject: { id: "reject", list: [] },
-  };
+  // Fetch data from the API
+  const { data: fetchedData } = useFetchDataQuery();
+  const data = useSelector((state) => state.data.data);
 
-  const [columns, setColumns] = useState(initialColumns);
+  // Initialize columns state to match fetched data
+  const [columns, setColumns] = useState({});
+  const [updateData, { error }] = useUpdateDataMutation();
+  const nameRef = useRef();
 
+  // Effect to update columns when data is fetched
+  useEffect(() => {
+    if (fetchedData) {
+      // Organize data into columns
+      const organizedColumns = {};
+      fetchedData.forEach((col) => {
+        organizedColumns[col.status] = col;
+      });
+      setColumns(organizedColumns);
+    }
+  }, [fetchedData]); // Add fetchedData as a dependency
+
+  // Handle drag end event to update the column status of the item
   const onDragEnd = ({ source, destination }) => {
-    if (
-      !destination ||
-      (source.droppableId === destination.droppableId &&
-        source.index === destination.index)
-    )
+    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
       return;
+    }
 
     const start = columns[source.droppableId];
     const end = columns[destination.droppableId];
 
     if (start === end) {
-      const newList = Array.from(start.list);
-      const [movedItem] = newList.splice(source.index, 1);
-      newList.splice(destination.index, 0, movedItem);
+      // Moving within the same column
+      const newItems = Array.from(start.items);
+      const [movedItem] = newItems.splice(source.index, 1);
+      newItems.splice(destination.index, 0, movedItem);
 
-      setColumns((state) => ({
-        ...state,
-        [start.id]: { ...start, list: newList },
+      setColumns((prevState) => ({
+        ...prevState,
+        [start.status]: { ...start, items: newItems },
       }));
     } else {
-      const startList = Array.from(start.list);
-      const [movedItem] = startList.splice(source.index, 1);
-      const endList = Array.from(end.list);
-      endList.splice(destination.index, 0, movedItem);
+      // Moving between columns
+      const startItems = Array.from(start.items);
+      const [movedItem] = startItems.splice(source.index, 1);
 
-      setColumns((state) => ({
-        ...state,
-        [start.id]: { ...start, list: startList },
-        [end.id]: { ...end, list: endList },
+      const endItems = Array.from(end.items);
+      endItems.splice(destination.index, 0, movedItem);
+
+      // Update item status after moving
+      const updatedItem = { ...movedItem, status: end.status };
+      updateData(updatedItem); // Call API to update status
+
+      setColumns((prevState) => ({
+        ...prevState,
+        [start.status]: { ...start, items: startItems },
+        [end.status]: { ...end, items: endItems },
       }));
     }
   };
-  const name = useRef();
+
+  // Handle adding a new column
   const handleColumn = () => {
-    const newColumnId = name.current.value;
+    const newColumnId = nameRef.current.value;
     if (newColumnId.trim() === "") return;
-    const newColumn = {
-      id: newColumnId,
-      list: [],
-    };
-    setColumns((state) => ({ ...state, [newColumn.id]: newColumn }));
-    name.current.value = "";
+
+    const newColumn = { status: newColumnId, items: [] };
+    setColumns((prevState) => ({ ...prevState, [newColumn.status]: newColumn }));
+    nameRef.current.value = "";
   };
 
   return (
@@ -63,15 +80,15 @@ const App = () => {
         <div className="border border-black p-2 bg-gray-100 flex flex-col items-center gap-3">
           <input
             type="text"
-            placeholder="add new column"
-            ref={name}
+            placeholder="Add new column"
+            ref={nameRef}
             className="bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1 placeholder:text-white"
           />
           <button
             onClick={handleColumn}
             className="bg-black text-white p-2 rounded"
           >
-            submit
+            Submit
           </button>
         </div>
       </div>
@@ -83,32 +100,43 @@ const App = () => {
             margin: "24px auto",
             width: "80%",
             gap: "8px",
+            height: "full",
           }}
         >
           {Object.values(columns).map((col) => (
-            <Droppable key={col.id} droppableId={col.id}>
-              {(provided) => (
-                <div className="text-center p-2 border rounded bg-gray-200">
-                  <h2>{col.id}</h2>
+            <Droppable key={col.status} droppableId={col.status}>
+              {(provided, snapshot) => (
+                <div
+                  className={`text-center p-2 border rounded bg-gray-200 ${
+                    snapshot.isDraggingOver ? "bg-blue-100" : ""
+                  }`}
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                >
+                  <h2>{col.status}</h2>
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
                       minHeight: "120px",
                     }}
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
                   >
-                    {col.list.map((text, index) => (
-                      <Draggable key={text} draggableId={text} index={index}>
-                        {(provided) => (
+                    {col.items.map((item, index) => (
+                      <Draggable
+                        key={item.id}
+                        draggableId={item.id.toString()}
+                        index={index}
+                      >
+                        {(provided, snapshot) => (
                           <div
-                            className="bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1"
+                            className={`bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1 ${
+                              snapshot.isDragging ? "bg-blue-200 text-black" : ""
+                            }`}
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                           >
-                            {text}
+                            {item.title}
                           </div>
                         )}
                       </Draggable>
