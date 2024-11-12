@@ -16,7 +16,15 @@ export const dataApi = createApi({
     updateData: builder.mutation({
       query: (data) => ({
         url: `/order-change`,
-        method: "PUT",
+        method: "POST",
+        data,
+      }),
+      providesTags: ["Data"],
+    }),
+    updateIndex: builder.mutation({
+      query: (data) => ({
+        url: `/update-index`,
+        method: "POST",
         data,
       }),
       providesTags: ["Data"],
@@ -24,4 +32,4 @@ export const dataApi = createApi({
   }),
 });
 
-export const { useFetchDataQuery, useUpdateDataMutation } = dataApi;
+export const { useFetchDataQuery, useUpdateDataMutation , useUpdateIndexMutation } = dataApi;

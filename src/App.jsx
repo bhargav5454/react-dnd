@@ -1,13 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { useFetchDataQuery, useUpdateDataMutation } from "./store/api/DataApi";
+import { PlusCircle, X } from "lucide-react";
+import {
+  useFetchDataQuery,
+  useUpdateDataMutation,
+  useUpdateIndexMutation,
+} from "./store/api/DataApi";
 
 const App = () => {
   const { data: apiResponse } = useFetchDataQuery();
   // const  = useSelector((state) => state.data.data.data?.data);
   const [columns, setColumns] = useState({});
   const [updateData] = useUpdateDataMutation();
+  const [updateIndex] = useUpdateIndexMutation();
+
   const nameRef = useRef();
 
   // Effect to update columns when data is fetched
@@ -45,6 +51,11 @@ const App = () => {
         ...prevState,
         [start.status]: { ...start, items: newItems },
       }));
+      updateIndex({
+        status: start.status,
+        sourceIndex: source?.index,
+        destinationIndex: destination?.index,
+      });
     } else {
       const startItems = Array.from(start.items);
       const [movedItem] = startItems.splice(source.index, 1);
@@ -80,83 +91,98 @@ const App = () => {
     nameRef.current.value = "";
   };
 
+  const handleNewItem = (columnStatus) => {
+    const newItemText = newItemTexts[columnStatus] || "";
+    if (newItemText) {
+      setColumns((prev) => ({
+        ...prev,
+        [columnStatus]: {
+          ...prev[columnStatus],
+          items: [
+            ...prev[columnStatus].items,
+            { id: `task${Date.now()}`, title: newItemText },
+          ],
+        },
+      }));
+      setNewItemTexts((prev) => ({ ...prev, [columnStatus]: "" }));
+      setActiveInputs((prev) => ({ ...prev, [columnStatus]: false }));
+    }
+  };
+
+  // const onDragUpdate = (data) => {
+  //   console.log("🚀 ~ onDragUpdate ~ data:", data.destination)
+
+  // }
   return (
     <>
-      <div className="flex justify-center items-center py-2">
-        <div className="border border-black p-2 bg-gray-100 flex flex-col items-center gap-3">
-          <input
-            type="text"
-            placeholder="Add new column"
-            ref={nameRef}
-            className="bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1 placeholder:text-white"
-          />
-          <button
-            onClick={handleColumn}
-            className="bg-black text-white p-2 rounded"
-          >
-            Submit
-          </button>
+      <div className="min-h-screen bg-white p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center items-center mb-8">
+            <div className="bg-white border border-gray-300 shadow-md rounded-lg p-4 flex items-center space-x-4">
+              <input
+                type="text"
+                placeholder="Add new column"
+                ref={nameRef}
+                className="bg-white text-gray-700 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+              />
+              <button
+                onClick={handleColumn}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 ease-in-out"
+              >
+                Add Column
+              </button>
+            </div>
+          </div>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex gap-4 flex-wrap justify-center">
+              {Object.values(columns).map((col) => (
+                <Droppable key={col.status} droppableId={col.status}>
+                  {(provided, snapshot) => (
+                    <div
+                      className={`bg-gray-50 border border-gray-500 rounded-lg w-[300px] h-full shadow-lg ${
+                        snapshot.isDraggingOver ? "ring-2 ring-gray-400" : ""
+                      }`}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      <h2 className="text-lg font-bold text-gray-800 p-4 text-center border-b border-gray-300">
+                        {col.status}
+                      </h2>
+                      <div className="p-4 space-y-3">
+                        {col.items.map((item, index) => (
+                          <Draggable
+                            key={item.id}
+                            draggableId={item.id.toString()}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                className={`bg-white p-4 rounded-lg border border-gray-200 ${
+                                  snapshot.isDragging
+                                    ? "shadow-lg ring-1 ring-gray-300"
+                                    : ""
+                                }`}
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <h3 className="text-gray-700 font-semibold">
+                                  {item.title}
+                                </h3>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              ))}
+            </div>
+          </DragDropContext>
         </div>
       </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            margin: "24px auto",
-            width: "80%",
-            gap: "8px",
-            height: "full",
-          }}
-        >
-          {Object.values(columns).map((col) => (
-            <Droppable key={col.status} droppableId={col.status}>
-              {(provided, snapshot) => (
-                <div
-                  className={`text-center p-2 border rounded bg-gray-200 ${
-                    snapshot.isDraggingOver ? "bg-blue-100" : ""
-                  }`}
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                >
-                  <h2>{col.status}</h2>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      minHeight: "120px",
-                    }}
-                  >
-                    {col.items.map((item, index) => (
-                      <Draggable
-                        key={item.id}
-                        draggableId={item.id.toString()}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            className={`bg-gray-500 p-2 text-white border-2 rounded border-gray-400 m-1 ${
-                              snapshot.isDragging
-                                ? "bg-blue-200 text-black"
-                                : ""
-                            }`}
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            {item.title}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
-      </DragDropContext>
     </>
   );
 };
