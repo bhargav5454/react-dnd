@@ -184,14 +184,13 @@ const App = () => {
     setExpandedItemId(expandedItemId === id ? null : id); // Toggle the expansion
   };
 
-  const onDragUpdate = (data) => { 
-    console.log("🚀 ~ onDragUpdate ~ data:", data.destination)
-    
-  }
+  const onDragUpdate = (data) => {
+    console.log("🚀 ~ onDragUpdate ~ data:", data.destination);
+  };
 
   return (
     <>
-      <div className="min-h-screen bg-white p-8">
+      <div className="min-h-screen bg-white p-8 overflow-x-auto flex">
         <div className="">
           <div className="flex justify-center items-center mb-8">
             <div className="bg-white border border-gray-300 shadow-md rounded-lg p-4 flex items-center space-x-4">
@@ -209,102 +208,103 @@ const App = () => {
               </button>
             </div>
           </div>
-          <DragDropContext onDragEnd={onDragEnd} onDragUpdate={onDragUpdate}>
-            <div className="flex gap-4 flex-grow justify-center">
-              {Object.values(columns).map((col) => (
-                <Droppable key={col.status} droppableId={col.status}>
-                  {(provided, snapshot) => (
-                    <>
-                      <div
-                        className={`bg-[#f3f6ff] border border-gray-500 rounded-lg w-[300px] h-full shadow-lg p-3`}
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                      >
-                        <div className="flex justify-between">
-                          <h2 className="text-lg font-bold text-gray-800 border-gray-300">
-                            {col.status}
-                          </h2>
-                          <div className="border p-1  border-dashed rounded-full border-gray-500 text-gray-500 hover:text-blue-600 hover:ease-in-out">
-                            <Plus
-                              onClick={() => handleAddCard(col.status)}
-                              size={18}
-                            />
+            <DragDropContext onDragEnd={onDragEnd} onDragUpdate={onDragUpdate}>
+              <div className="flex gap-4 flex-grow justify-center">
+                {Object.values(columns).map((col) => (
+                  <Droppable key={col.status} droppableId={col.status}>
+                    {(provided, snapshot) => (
+                      <>
+                        <div
+                          className={`bg-[#f3f6ff] border border-gray-500 rounded-lg w-[300px] h-full shadow-lg p-3`}
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                        >
+                          <div className="flex justify-between">
+                            <h2 className="text-lg font-bold text-gray-800 border-gray-300">
+                              {col.status}
+                            </h2>
+                            <div className="border p-1  border-dashed rounded-full border-gray-500 text-gray-500 hover:text-blue-600 hover:ease-in-out">
+                              <Plus
+                                onClick={() => handleAddCard(col.status)}
+                                size={18}
+                              />
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          {col.items.map((item, index) => (
-                            <Draggable
-                              key={item.id}
-                              draggableId={item.id.toString()}
-                              index={index}
-                            >
-                              {(provided, snapshot) => (
-                                <>
-                                  <div
-                                    className={`bg-white  rounded-lg border border-gray-200 mt-3 ${
-                                      snapshot.isDragging
-                                        ? "shadow-2xl ring-1 ring-gray-300"
-                                        : ""
-                                    }`}
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                  >
-                                    <div className="todo-card p-3  transition duration-300 ease-in-out">
-                                      <h3 className="text-gray-800 text-xl font-semibold mb-2">
-                                        {item.title}
-                                      </h3>
+                          <div>
+                            {col.items.map((item, index) => (
+                              <Draggable
+                                key={item.id}
+                                draggableId={item.id.toString()}
+                                index={index}
+                              >
+                                {(provided, snapshot) => (
+                                  <>
+                                    <div
+                                      className={`bg-white  rounded-lg border border-gray-200 mt-3 ${
+                                        snapshot.isDragging
+                                          ? "shadow-2xl ring-1 ring-gray-300"
+                                          : ""
+                                      }`}
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                    >
+                                      <div className="todo-card p-3  transition duration-300 ease-in-out">
+                                        <h3 className="text-gray-800 text-xl font-semibold mb-2">
+                                          {item.title}
+                                        </h3>
 
-                                      <div key={item.id} className="mb-4">
-                                        <p className="text-gray-600 text-sm">
-                                          {item.description.length > MAX_LENGTH
-                                            ? expandedItemId === item.id
-                                              ? item.description
-                                              : `${item.description.substring(
-                                                  0,
-                                                  MAX_LENGTH
-                                                )}...`
-                                            : item.description}
-                                        </p>
-                                        {item.description.length >
-                                          MAX_LENGTH && (
-                                          <button
-                                            className="text-blue-500 text-sm focus:outline-none hover:underline"
-                                            onClick={() =>
-                                              handleToggle(item.id)
-                                            }
-                                          >
-                                            {expandedItemId === item.id
-                                              ? "Less"
-                                              : "More"}
-                                          </button>
-                                        )}
-                                      </div>
+                                        <div key={item.id} className="mb-4">
+                                          <p className="text-gray-600 text-sm">
+                                            {item.description.length >
+                                            MAX_LENGTH
+                                              ? expandedItemId === item.id
+                                                ? item.description
+                                                : `${item.description.substring(
+                                                    0,
+                                                    MAX_LENGTH
+                                                  )}...`
+                                              : item.description}
+                                          </p>
+                                          {item.description.length >
+                                            MAX_LENGTH && (
+                                            <button
+                                              className="text-blue-500 text-sm focus:outline-none hover:underline"
+                                              onClick={() =>
+                                                handleToggle(item.id)
+                                              }
+                                            >
+                                              {expandedItemId === item.id
+                                                ? "Less"
+                                                : "More"}
+                                            </button>
+                                          )}
+                                        </div>
 
-                                      <div className="flex items-center text-gray-500 text-sm">
-                                        <Clock
-                                          className="text-gray-500 mr-2"
-                                          size={16}
-                                        />
-                                        <span>{item.dueDate}</span>
+                                        <div className="flex items-center text-gray-500 text-sm">
+                                          <Clock
+                                            className="text-gray-500 mr-2"
+                                            size={16}
+                                          />
+                                          <span>{item.dueDate}</span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                </>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
+                                  </>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </Droppable>
-              ))}
-            </div>
-          </DragDropContext>
+                      </>
+                    )}
+                  </Droppable>
+                ))}
+              </div>
+            </DragDropContext>
+          </div>
         </div>
-      </div>
 
       {/* Modal with smooth animation */}
       {Model && (
