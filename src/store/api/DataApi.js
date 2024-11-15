@@ -19,7 +19,7 @@ export const dataApi = createApi({
         method: "POST",
         data,
       }),
-      providesTags: ["Data"],
+      invalidatesTags: ["Data"],
     }),
     updateIndex: builder.mutation({
       query: (data) => ({
@@ -29,7 +29,29 @@ export const dataApi = createApi({
       }),
       providesTags: ["Data"],
     }),
+    addNewColumn: builder.mutation({
+      query: (data) => ({
+        url: `/add-new-column`,
+        method: "PUT",
+        data,
+      }),
+      invalidatesTags: ["Data"],
+    }),
+    addNewCard: builder.mutation({
+      query: (data) => ({
+        url: `/add-new-card`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: ["Data"],
+    }),
   }),
 });
 
-export const { useFetchDataQuery, useUpdateDataMutation , useUpdateIndexMutation } = dataApi;
+export const {
+  useFetchDataQuery,
+  useUpdateDataMutation,
+  useUpdateIndexMutation,
+  useAddNewColumnMutation,
+  useAddNewCardMutation,
+} = dataApi;

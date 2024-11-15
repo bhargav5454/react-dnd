@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { PlusCircle, X } from "lucide-react";
+import { Plus, PlusCircle, Watch, X } from "lucide-react";
 import {
+  useAddNewCardMutation,
+  useAddNewColumnMutation,
   useFetchDataQuery,
   useUpdateDataMutation,
   useUpdateIndexMutation,
@@ -9,12 +11,20 @@ import {
 
 const App = () => {
   const { data: apiResponse } = useFetchDataQuery();
-  // const  = useSelector((state) => state.data.data.data?.data);
   const [columns, setColumns] = useState({});
+  const [Model, setModel] = useState(false); // State to track modal visibility
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+  });
+  const nameRef = useRef();
+
+  // axios query
   const [updateData] = useUpdateDataMutation();
   const [updateIndex] = useUpdateIndexMutation();
-
-  const nameRef = useRef();
+  const [newColums] = useAddNewColumnMutation();
+  const [newCard] = useAddNewCardMutation();
 
   // Effect to update columns when data is fetched
   useEffect(() => {
@@ -64,6 +74,7 @@ const App = () => {
       endItems.splice(destination.index, 0, movedItem);
 
       const updatedItem = {
+        newIndex: destination.index,
         itemId: movedItem.id,
         updatedStatus: end.status,
         prevStatus: start.status,
@@ -81,6 +92,11 @@ const App = () => {
   // Handle adding a new column
   const handleColumn = () => {
     const newColumnId = nameRef.current.value;
+    if (newColumnId == "") {
+      alert("Please enter a column name");
+      return;
+    }
+    newColums({ columnName: newColumnId });
     if (newColumnId.trim() === "") return;
 
     const newColumn = { status: newColumnId, items: [] };
@@ -91,32 +107,37 @@ const App = () => {
     nameRef.current.value = "";
   };
 
-  const handleNewItem = (columnStatus) => {
-    const newItemText = newItemTexts[columnStatus] || "";
-    if (newItemText) {
-      setColumns((prev) => ({
-        ...prev,
-        [columnStatus]: {
-          ...prev[columnStatus],
-          items: [
-            ...prev[columnStatus].items,
-            { id: `task${Date.now()}`, title: newItemText },
-          ],
-        },
-      }));
-      setNewItemTexts((prev) => ({ ...prev, [columnStatus]: "" }));
-      setActiveInputs((prev) => ({ ...prev, [columnStatus]: false }));
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
   };
 
-  // const onDragUpdate = (data) => {
-  //   console.log("🚀 ~ onDragUpdate ~ data:", data.destination)
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    newCard(formData);
+    setModel(false);
+  };
 
-  // }
+  // Toggle the modal visibility
+  const handleAddCard = (statusId) => {
+    setModel(true);
+    setFormData((prevData) => ({
+      ...prevData,
+      status: statusId,
+    }));
+  };
+
+  const closeModal = () => {
+    setModel(false);
+  };
+
   return (
     <>
       <div className="min-h-screen bg-white p-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="">
           <div className="flex justify-center items-center mb-8">
             <div className="bg-white border border-gray-300 shadow-md rounded-lg p-4 flex items-center space-x-4">
               <input
@@ -134,48 +155,72 @@ const App = () => {
             </div>
           </div>
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex gap-4 flex-wrap justify-center">
+            <div className="flex gap-4 flex-grow justify-center">
               {Object.values(columns).map((col) => (
                 <Droppable key={col.status} droppableId={col.status}>
                   {(provided, snapshot) => (
-                    <div
-                      className={`bg-gray-50 border border-gray-500 rounded-lg w-[300px] h-full shadow-lg ${
-                        snapshot.isDraggingOver ? "ring-2 ring-gray-400" : ""
-                      }`}
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                    >
-                      <h2 className="text-lg font-bold text-gray-800 p-4 text-center border-b border-gray-300">
-                        {col.status}
-                      </h2>
-                      <div className="p-4 space-y-3">
-                        {col.items.map((item, index) => (
-                          <Draggable
-                            key={item.id}
-                            draggableId={item.id.toString()}
-                            index={index}
-                          >
-                            {(provided, snapshot) => (
-                              <div
-                                className={`bg-white p-4 rounded-lg border border-gray-200 ${
-                                  snapshot.isDragging
-                                    ? "shadow-lg ring-1 ring-gray-300"
-                                    : ""
-                                }`}
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                              >
-                                <h3 className="text-gray-700 font-semibold">
-                                  {item.title}
-                                </h3>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
+                    <>
+                      <div
+                        className={`bg-[#f3f6ff] border border-gray-500 rounded-lg w-[300px] h-full shadow-lg p-3`}
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                      >
+                        <div className="flex justify-between">
+                          <h2 className="text-lg font-bold text-gray-800 border-gray-300">
+                            {col.status}
+                          </h2>
+                          <div className="border p-1  border-dashed rounded-full border-gray-500 text-gray-500 hover:text-blue-600 hover:ease-in-out">
+                            <Plus
+                              onClick={() => handleAddCard(col.status)}
+                              size={18}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          {col.items.map((item, index) => (
+                            <Draggable
+                              key={item.id}
+                              draggableId={item.id.toString()}
+                              index={index}
+                            >
+                              {(provided, snapshot) => (
+                                <>
+                                  <div
+                                    className={`bg-white  rounded-lg border border-gray-200 mt-3 ${
+                                      snapshot.isDragging
+                                        ? "shadow-2xl ring-1 ring-gray-300"
+                                        : ""
+                                    }`}
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                  >
+                                    <div className="todo-card p-3  transition duration-300 ease-in-out">
+                                      <h3 className="text-gray-800 text-xl font-semibold mb-2">
+                                        {item.title}
+                                      </h3>
+
+                                      <p className="text-gray-600 text-sm mb-4">
+                                        {item.description}
+                                      </p>
+
+                                      <div className="flex items-center text-gray-500 text-sm">
+                                        <Watch
+                                          className="text-gray-500 mr-2"
+                                          size={16}
+                                        />
+                                        <span>{item.dueDate}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </Droppable>
               ))}
@@ -183,6 +228,84 @@ const App = () => {
           </DragDropContext>
         </div>
       </div>
+
+      {/* Modal with smooth animation */}
+      {Model && (
+        <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-5 backdrop-blur-sm transition-all duration-500 ease-in-out opacity-100">
+          <div className="bg-white rounded-lg w-1/4 p-6 transform transition-all duration-500 ease-in-out scale-100 opacity-100 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Add New Card</h2>
+              <button onClick={closeModal}>
+                <X className="text-gray-600" />
+              </button>
+            </div>
+            {/* Add form or content for the new card */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="title"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="Card title"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Card description"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                ></textarea>
+              </div>
+              <div>
+                <label
+                  htmlFor="dueDate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  id="dueDate"
+                  name="dueDate"
+                  value={formData.dueDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                >
+                  Add Card
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };
