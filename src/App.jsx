@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Plus, PlusCircle, Watch, X } from "lucide-react";
+import { Clock, Plus, X } from "lucide-react";
 import {
   useAddNewCardMutation,
   useAddNewColumnMutation,
@@ -12,7 +12,9 @@ import {
 const App = () => {
   const { data: apiResponse } = useFetchDataQuery();
   const [columns, setColumns] = useState({});
-  const [Model, setModel] = useState(false); // State to track modal visibility
+  const [Model, setModel] = useState(false);
+  const [expandedItemId, setExpandedItemId] = useState(null);
+  const MAX_LENGTH = 100;
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -25,6 +27,44 @@ const App = () => {
   const [updateIndex] = useUpdateIndexMutation();
   const [newColums] = useAddNewColumnMutation();
   const [newCard] = useAddNewCardMutation();
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:8001");
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "order_updated") {
+        if (data?.item.data?.data) {
+          const organizedColumns = Object.entries(data?.item.data?.data).reduce(
+            (acc, [status, items]) => ({
+              ...acc,
+              [status]: { status, items },
+            }),
+            {}
+          );
+          setColumns(organizedColumns);
+        }
+      }
+      if (data.type === "reordered_updated") {
+        if (data?.item) {
+          setColumns((prevState) => ({
+            ...prevState,
+            [data.item.status]: {
+              status: data.item.status,
+              items: data.item.updatedData,
+            },
+          }));
+        }
+      }
+      if (data.type === "new_column") {
+        const newColumnId = data.item.columnName;
+        setColumns((prevState) => ({
+          ...prevState,
+          [newColumnId]: { status: newColumnId, items: [] },
+        }));
+      }
+    };
+    return () => socket.close();
+  }, []);
 
   // Effect to update columns when data is fetched
   useEffect(() => {
@@ -118,6 +158,12 @@ const App = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     newCard(formData);
+    setFormData({
+      title: "",
+      description: "",
+      dueDate: "",
+      status: "",
+    });
     setModel(false);
   };
 
@@ -133,6 +179,15 @@ const App = () => {
   const closeModal = () => {
     setModel(false);
   };
+
+  const handleToggle = (id) => {
+    setExpandedItemId(expandedItemId === id ? null : id); // Toggle the expansion
+  };
+
+  const onDragUpdate = (data) => { 
+    console.log("🚀 ~ onDragUpdate ~ data:", data.destination)
+    
+  }
 
   return (
     <>
@@ -154,7 +209,7 @@ const App = () => {
               </button>
             </div>
           </div>
-          <DragDropContext onDragEnd={onDragEnd}>
+          <DragDropContext onDragEnd={onDragEnd} onDragUpdate={onDragUpdate}>
             <div className="flex gap-4 flex-grow justify-center">
               {Object.values(columns).map((col) => (
                 <Droppable key={col.status} droppableId={col.status}>
@@ -200,12 +255,34 @@ const App = () => {
                                         {item.title}
                                       </h3>
 
-                                      <p className="text-gray-600 text-sm mb-4">
-                                        {item.description}
-                                      </p>
+                                      <div key={item.id} className="mb-4">
+                                        <p className="text-gray-600 text-sm">
+                                          {item.description.length > MAX_LENGTH
+                                            ? expandedItemId === item.id
+                                              ? item.description
+                                              : `${item.description.substring(
+                                                  0,
+                                                  MAX_LENGTH
+                                                )}...`
+                                            : item.description}
+                                        </p>
+                                        {item.description.length >
+                                          MAX_LENGTH && (
+                                          <button
+                                            className="text-blue-500 text-sm focus:outline-none hover:underline"
+                                            onClick={() =>
+                                              handleToggle(item.id)
+                                            }
+                                          >
+                                            {expandedItemId === item.id
+                                              ? "Less"
+                                              : "More"}
+                                          </button>
+                                        )}
+                                      </div>
 
                                       <div className="flex items-center text-gray-500 text-sm">
-                                        <Watch
+                                        <Clock
                                           className="text-gray-500 mr-2"
                                           size={16}
                                         />
