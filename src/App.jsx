@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Clock, Plus, X } from "lucide-react";
+import { Clock,  X, MoreHorizontal, Edit } from "lucide-react";
 import {
   useAddNewCardMutation,
   useAddNewColumnMutation,
@@ -15,9 +15,10 @@ const App = () => {
   const [columns, setColumns] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
-    description: "", 
+    description: "",
     dueDate: "",
   });
 
@@ -31,13 +32,25 @@ const App = () => {
   const [addNewColumn] = useAddNewColumnMutation();
   const [addNewCard] = useAddNewCardMutation();
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (activeDropdown && !event.target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   // WebSocket connection
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8001");
-    
+
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
+
       switch (data.type) {
         case "order_updated":
           if (data?.item.data?.data) {
@@ -93,9 +106,11 @@ const App = () => {
 
   // Drag and drop handlers
   const onDragEnd = ({ source, destination }) => {
-    if (!destination || 
-        (source.droppableId === destination.droppableId && 
-         source.index === destination.index)) {
+    if (
+      !destination ||
+      (source.droppableId === destination.droppableId &&
+        source.index === destination.index)
+    ) {
       return;
     }
 
@@ -143,7 +158,7 @@ const App = () => {
   // UI event handlers
   const handleAddColumn = () => {
     const columnName = nameRef.current.value.trim();
-    
+
     if (!columnName) {
       alert("Please enter a column name");
       return;
@@ -178,6 +193,22 @@ const App = () => {
     setExpandedItemId(expandedItemId === id ? null : id);
   };
 
+  const handleRemoveColumn = (statusId) => {
+    const newColumns = { ...columns };
+    delete newColumns[statusId];
+    setColumns(newColumns);
+  };
+
+  const handleRenameColumn = (statusId) => {
+    const newName = prompt("Enter new column name:", statusId);
+    if (newName && newName !== statusId) {
+      const newColumns = { ...columns };
+      newColumns[newName] = { ...newColumns[statusId], status: newName };
+      delete newColumns[statusId];
+      setColumns(newColumns);
+    }
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 overflow-x-auto">
@@ -193,7 +224,7 @@ const App = () => {
               />
               <button
                 onClick={handleAddColumn}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200 ease-in-out transform hover:scale-105"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition  ease-in-out transform hover:scale-105"
               >
                 Add Column
               </button>
@@ -204,83 +235,119 @@ const App = () => {
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex gap-6 flex-nowrap justify-start">
               {Object.values(columns).map((col) => (
-                <Droppable key={col.status} droppableId={col.status}>
-                  {(provided, snapshot) => (
-                    <>
-                      <div
-                        className={`bg-white border border-gray-200 rounded-xl w-[320px] h-full shadow-lg p-4
-                          ${snapshot.isDraggingOver ? 'bg-indigo-50' : ''}`}
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
+                <div key={col.status} className="bg-white border border-gray-200 rounded-xl w-[320px] shadow-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-bold text-gray-800">
+                      {col.status}
+                    </h2>
+                    <div className="relative dropdown-container">
+                      <button
+                        onClick={() => setActiveDropdown(col.status)}
+                        className=" rounded-full hover:bg-indigo-100 transition-colors"
+                        aria-label="Column options"
                       >
-                        <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-lg font-bold text-gray-800">
-                            {col.status}
-                          </h2>
-                          <button 
-                            onClick={() => handleAddCard(col.status)}
-                            className="p-1.5 rounded-full hover:bg-indigo-100 transition-colors duration-200"
+                        <MoreHorizontal className="text-indigo-600" size={20} />
+                      </button>
+
+                      {activeDropdown === col.status && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                          <button
+                            onClick={() => {
+                              handleAddCard(col.status);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50"
                           >
-                            <Plus className="text-indigo-600" size={20} />
+                            
+                            Add new card
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleRemoveColumn(col.status);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50"
+                          >
+                            Remove column
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleRenameColumn(col.status);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50"
+                          >
+                            Rename column
                           </button>
                         </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Droppable droppableId={col.status}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[700px] rounded-lg transition-colors  ${
+                          snapshot.isDraggingOver ? "bg-indigo-50" : ""
+                        }`}
+                      >
+                        {col.items.map((item, index) => (
+                          <Draggable
+                            key={item.id}
+                            draggableId={item.id.toString()}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`bg-white rounded-lg border mb-3 last:mb-0 ${
+                                  snapshot.isDragging
+                                    ? "shadow-2xl border-indigo-300 ring-2 ring-indigo-200"
+                                    : "border-gray-200 hover:border-indigo-300 hover:shadow-md"
+                                }  `}
+                              >
+                                <div className="p-4">
+                                  <h3 className="text-gray-900 font-semibold text-lg mb-2">
+                                    {item.title}
+                                  </h3>
+      
+                                  <div className="mb-3">
+                                    <p className="text-gray-600 text-sm leading-relaxed">
+                                      {item.description.length > MAX_DESCRIPTION_LENGTH
+                                        ? expandedItemId === item.id
+                                          ? item.description
+                                          : `${item.description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
+                                        : item.description}
+                                    </p>
+                                    {item.description.length > MAX_DESCRIPTION_LENGTH && (
+                                      <button
+                                        type="button"
+                                        className="text-indigo-600 text-sm mt-1 hover:underline focus:outline-none"
+                                        onClick={() => handleToggleDescription(item.id)}
+                                      >
+                                        {expandedItemId === item.id ? "Show less" : "Read more"}
+                                      </button>
+                                    )}
+                                  </div>
 
-                        <div className="space-y-3">
-                          {col.items.map((item, index) => (
-                            <Draggable
-                              key={item.id}
-                              draggableId={item.id.toString()}
-                              index={index}
-                            >
-                              {(provided, snapshot) => (
-                                <div
-                                  className={`bg-white rounded-lg border ${
-                                    snapshot.isDragging
-                                      ? "shadow-2xl border-indigo-300 ring-2 ring-indigo-200"
-                                      : "border-gray-200 hover:border-indigo-300"
-                                  } transition-all duration-200`}
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                >
-                                  <div className="p-4">
-                                    <h3 className="text-gray-900 font-semibold text-lg mb-2">
-                                      {item.title}
-                                    </h3>
-
-                                    <div className="mb-3">
-                                      <p className="text-gray-600 text-sm leading-relaxed">
-                                        {item.description.length > MAX_DESCRIPTION_LENGTH
-                                          ? expandedItemId === item.id
-                                            ? item.description
-                                            : `${item.description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
-                                          : item.description}
-                                      </p>
-                                      {item.description.length > MAX_DESCRIPTION_LENGTH && (
-                                        <button
-                                          className="text-indigo-600 text-sm mt-1 hover:underline focus:outline-none"
-                                          onClick={() => handleToggleDescription(item.id)}
-                                        >
-                                          {expandedItemId === item.id ? "Show less" : "Read more"}
-                                        </button>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center text-gray-500">
-                                      <Clock className="text-indigo-500 mr-2" size={16} />
-                                      <span className="text-sm">{item.dueDate}</span>
-                                    </div>
+                                  <div className="flex items-center text-gray-500">
+                                    <Clock className="text-indigo-500 mr-2" size={16} />
+                                    <time className="text-sm">{item.dueDate}</time>
                                   </div>
                                 </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
-                    </>
-                  )}
-                </Droppable>
+                    )}
+                  </Droppable>
+                </div>
               ))}
             </div>
           </DragDropContext>
@@ -293,7 +360,7 @@ const App = () => {
           <div className="bg-white rounded-xl w-[400px] p-6 shadow-2xl transform transition-all duration-300 ease-out">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Add New Card</h2>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
               >
@@ -348,7 +415,7 @@ const App = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02]"
+                className="w-full py-2.5 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all  transform hover:scale-[1.02]"
               >
                 Add Card
               </button>
