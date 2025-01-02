@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import { Clock,  X, MoreHorizontal, Edit } from "lucide-react";
+import { Clock, X, MoreHorizontal, Edit } from "lucide-react";
 import {
   useAddNewCardMutation,
   useAddNewColumnMutation,
@@ -258,7 +258,7 @@ const App = () => {
                             }}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50"
                           >
-                            
+
                             Add new card
                           </button>
                           <button
@@ -283,15 +283,14 @@ const App = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <Droppable droppableId={col.status}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[700px] rounded-lg transition-colors  ${
-                          snapshot.isDraggingOver ? "bg-indigo-50" : ""
-                        }`}
+                        className={`min-h-[700px] rounded-lg transition-colors  ${snapshot.isDraggingOver ? "bg-indigo-50" : ""
+                          }`}
                       >
                         {col.items.map((item, index) => (
                           <Draggable
@@ -304,17 +303,16 @@ const App = () => {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`bg-white rounded-lg border mb-3 last:mb-0 ${
-                                  snapshot.isDragging
-                                    ? "shadow-2xl border-indigo-300 ring-2 ring-indigo-200"
-                                    : "border-gray-200 hover:border-indigo-300 hover:shadow-md"
-                                }  `}
+                                className={`bg-white rounded-lg border mb-3 last:mb-0 ${snapshot.isDragging
+                                  ? "shadow-2xl border-indigo-300 ring-2 ring-indigo-200"
+                                  : "border-gray-200 hover:border-indigo-300 hover:shadow-md"
+                                  }  `}
                               >
                                 <div className="p-4">
                                   <h3 className="text-gray-900 font-semibold text-lg mb-2">
                                     {item.title}
                                   </h3>
-      
+
                                   <div className="mb-3">
                                     <p className="text-gray-600 text-sm leading-relaxed">
                                       {item.description.length > MAX_DESCRIPTION_LENGTH

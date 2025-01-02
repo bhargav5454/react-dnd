@@ -6,19 +6,19 @@ const api = axios.create({
 
 const axiosBaseQuery =
   () =>
-  async ({ url, method, data }) => {
-    try {
-      const response = await api({ url, method, data });
-      return { data: response.data };
-    } catch (error) {
-      console.error(error);
-      return {
-        error: {
-          status: error.response?.status,
-          data: error.response?.data || error.message,
-        },
-      };
-    }
-  };
+    async ({ url, method, data }) => {
+      try {
+        const response = await api({ url, method, data });
+        return { data: response.data };
+      } catch (error) {
+        console.error(error);
+        return {
+          error: {
+            status: error.response?.status,
+            data: error.response?.data || error.message,
+          },
+        };
+      }
+    };
 
 export default axiosBaseQuery;
